@@ -1,0 +1,51 @@
+1. Time Converter
+Logic:
+
+To get the hours, we perform integer division (//) by 60.
+
+To get the remaining minutes, we use the modulo operator (%) with 60, which gives us the remainder.
+def convert_minutes(total_minutes):
+    # Calculate hours using integer division (floor division)
+    hours = total_minutes // 60
+    
+    # Calculate remaining minutes using the modulo operator
+    remaining_minutes = total_minutes % 60
+    
+    # Handling pluralization for 'hr' vs 'hrs' based on the examples
+    hr_label = "hr" if hours == 1 else "hrs"
+    
+    # Formatting the output
+    return f"{hours} {hr_label} {remaining_minutes} minutes"
+
+# --- Test Cases ---
+print(f"130 -> {convert_minutes(130)}")
+print(f"110 -> {convert_minutes(110)}")
+
+2. Remove Duplicates (Using a Loop)
+Logic:
+
+We create an empty string (unique_str) to store the result.
+
+We loop through every character in the original string.
+
+Inside the loop, we check if the character is NOT already in our result string.
+
+If it is not there, we add it. If it is there, we skip it.
+def remove_duplicates(input_string):
+    unique_str = ""
+    
+    for char in input_string:
+        # Check if the character has already been added
+        if char not in unique_str:
+            unique_str += char
+            
+    return unique_str
+
+# --- Test Cases ---
+sample_text = "banana"
+print(f"Original: {sample_text}")
+print(f"Unique:   {remove_duplicates(sample_text)}")
+
+sample_text_2 = "programming"
+print(f"Original: {sample_text_2}")
+print(f"Unique:   {remove_duplicates(sample_text_2)}")
