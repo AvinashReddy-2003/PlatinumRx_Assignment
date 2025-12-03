@@ -1,0 +1,46 @@
+Since the data is split across two sheets (ticket and feedbacks) and requires both data merging and time-stamp logic, the best approach involves Lookup Functions and Helper Columns followed by a Pivot Table.
+
+Part 1: Populate ticket_created_at in the feedbacks table
+The Challenge: In your ticket schema, the common link (cms_id) is listed after the value you want to retrieve (created_at).
+
+created_at is likely Column B.
+
+cms_id is likely Column E.
+
+Because the search key (cms_id) is to the right of the result column, a standard VLOOKUP will not work (unless you rearrange the columns). You should use XLOOKUP (modern Excel) or INDEX-MATCH (standard compatibility).
+
+Option A: The XLOOKUP Method (Best for Office 365/Google Sheets)
+This function doesn't care about column order.
+Excel is  =XLOOKUP(A2, 'ticket'!E:E, 'ticket'!B:B, "Not Found")
+Option B: The INDEX-MATCH Method (Works in all versions)
+Excel is =INDEX('ticket'!B:B, MATCH(A2, 'ticket'!E:E, 0))
+
+Part 2: Outlet-wise count of tickets (Same Day / Same Hour)
+To solve this cleanly, we should not try to do everything in one complex formula. Instead, we will add two Helper Columns to the ticket sheet to flag rows that meet the criteria.
+
+Step 1: Create Helper Columns in ticket sheet
+Helper Column 1: "Is Same Day?" Excel stores dates as integers and time as decimals. To check if the day is the same, we compare the integer portion of the timestamp.
+Excel is =INT(B2) = INT(C2)
+
+Step 2: Generate the Report (Pivot Table or COUNTIFS)
+Now that the data is flagged, you can aggregate it by outlet_id.
+
+Method A: Pivot Table (Recommended)
+
+Select the entire ticket table.
+
+Insert -> Pivot Table.
+
+Rows: Drag outlet_id to Rows.
+
+Values:
+
+Drag "Is Same Day?" to Values (Summarize by COUNT or SUM if you convert TRUE to 1).
+
+Drag "Is Same Hour?" to Values.
+
+Filter: Ensure you filter for TRUE if you are just counting rows.
+
+Method B: COUNTIFS Formula If you want a static table, list your unique outlet IDs in a new column (say, column G) and use:
+Excel is =COUNTIFS('ticket'!D:D, G2, 'ticket'!F:F, TRUE)
+Excel is =COUNTIFS('ticket'!D:D, G2, 'ticket'!G:G, TRUE)
