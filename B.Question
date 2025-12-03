@@ -1,0 +1,101 @@
+1. Find the revenue we got from each sales channel in a given year
+SELECT 
+    sales_channel, 
+    SUM(amount) AS total_revenue
+FROM clinic_sales
+WHERE EXTRACT(YEAR FROM datetime) = 2021
+GROUP BY sales_channel;
+
+2. Find top 10 most valuable customers for a given year
+SELECT 
+    c.uid, 
+    c.name, 
+    SUM(cs.amount) AS total_spend
+FROM customer c
+JOIN clinic_sales cs ON c.uid = cs.uid
+WHERE EXTRACT(YEAR FROM cs.datetime) = 2021
+GROUP BY c.uid, c.name
+ORDER BY total_spend DESC
+LIMIT 10;
+
+3. Find month wise revenue, expense, profit, status (profitable / not-profitable) for a given year
+WITH MonthlyRev AS (
+    SELECT 
+        EXTRACT(MONTH FROM datetime) AS month_num, 
+        SUM(amount) AS revenue
+    FROM clinic_sales
+    WHERE EXTRACT(YEAR FROM datetime) = 2021
+    GROUP BY EXTRACT(MONTH FROM datetime)
+),
+MonthlyExp AS (
+    SELECT 
+        EXTRACT(MONTH FROM datetime) AS month_num, 
+        SUM(amount) AS expenses
+    FROM expenses
+    WHERE EXTRACT(YEAR FROM datetime) = 2021
+    GROUP BY EXTRACT(MONTH FROM datetime)
+)
+SELECT 
+    r.month_num,
+    r.revenue,
+    COALESCE(e.expenses, 0) AS expenses,
+    (r.revenue - COALESCE(e.expenses, 0)) AS profit,
+    CASE 
+        WHEN (r.revenue - COALESCE(e.expenses, 0)) > 0 THEN 'Profitable'
+        ELSE 'Not-Profitable'
+    END AS status
+FROM MonthlyRev r
+LEFT JOIN MonthlyExp e ON r.month_num = e.month_num;
+
+4. For each city find the most profitable clinic for a given month
+WITH ClinicProfit AS (
+    SELECT 
+        c.cid,
+        (COALESCE(SUM(s.amount), 0) - COALESCE(SUM(e.amount), 0)) AS profit
+    FROM clinics c
+    LEFT JOIN clinic_sales s 
+        ON c.cid = s.cid AND EXTRACT(MONTH FROM s.datetime) = 9 AND EXTRACT(YEAR FROM s.datetime) = 2021
+    LEFT JOIN expenses e 
+        ON c.cid = e.cid AND EXTRACT(MONTH FROM e.datetime) = 9 AND EXTRACT(YEAR FROM e.datetime) = 2021
+    GROUP BY c.cid
+),
+RankedClinics AS (
+    SELECT 
+        cp.cid,
+        c.clinic_name,
+        c.city,
+        cp.profit,
+        RANK() OVER (PARTITION BY c.city ORDER BY cp.profit DESC) as rn
+    FROM ClinicProfit cp
+    JOIN clinics c ON cp.cid = c.cid
+)
+SELECT city, clinic_name, profit
+FROM RankedClinics
+WHERE rn = 1;
+
+5. For each state find the second least profitable clinic for a given month
+WITH ClinicProfit AS (
+    SELECT 
+        c.cid,
+        (COALESCE(SUM(s.amount), 0) - COALESCE(SUM(e.amount), 0)) AS profit
+    FROM clinics c
+    LEFT JOIN clinic_sales s 
+        ON c.cid = s.cid AND EXTRACT(MONTH FROM s.datetime) = 9 AND EXTRACT(YEAR FROM s.datetime) = 2021
+    LEFT JOIN expenses e 
+        ON c.cid = e.cid AND EXTRACT(MONTH FROM e.datetime) = 9 AND EXTRACT(YEAR FROM e.datetime) = 2021
+    GROUP BY c.cid
+),
+RankedClinics AS (
+    SELECT 
+        cp.cid,
+        c.clinic_name,
+        c.state,
+        cp.profit,
+        -- Ordering ASC for "Least Profitable", DENSE_RANK handles ties better
+        DENSE_RANK() OVER (PARTITION BY c.state ORDER BY cp.profit ASC) as rn
+    FROM ClinicProfit cp
+    JOIN clinics c ON cp.cid = c.cid
+)
+SELECT state, clinic_name, profit
+FROM RankedClinics
+WHERE rn = 2;
